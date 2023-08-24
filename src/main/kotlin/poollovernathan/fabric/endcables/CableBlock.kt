@@ -1,6 +1,5 @@
 package poollovernathan.fabric.endcables
 
-import com.google.gson.JsonObject
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricModelProvider
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider
@@ -10,16 +9,14 @@ import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.data.client.BlockStateModelGenerator
 import net.minecraft.data.client.ItemModelGenerator
-import net.minecraft.data.client.Model
 import net.minecraft.data.server.RecipeProvider
 import net.minecraft.data.server.recipe.RecipeJsonProvider
 import net.minecraft.data.server.recipe.ShapedRecipeJsonBuilder
 import net.minecraft.item.*
+import net.minecraft.nbt.NbtCompound
 import net.minecraft.sound.BlockSoundGroup
-import net.minecraft.state.State
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.Properties
-import net.minecraft.state.property.Property
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
@@ -28,10 +25,8 @@ import net.minecraft.util.registry.Registry
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
 import poollovernathan.fabric.endcables.ExampleMod.id
-import java.util.*
-import java.util.function.BiConsumer
+import java.lang.IllegalArgumentException
 import java.util.function.Consumer
-import java.util.function.Supplier
 
 object CableBlock : Block(
     Settings.of(Material.METAL, MapColor.DARK_GREEN).requiresTool().strength(10.0f, 120.0f)
@@ -101,16 +96,14 @@ object CableBlock : Block(
                     produce(highX = true, highZ = false)
                     produce(highX = false, highZ = true)
                     produce(highX = true, highZ = true)
-                    if (item) {
-                        obj {
-                            ary("from", 4.001, 0.001, 4.001)
-                            ary("to", 11.999, 15.999, 11.999)
-                            obj("faces") {
-                                for (dir in DIRECTIONS) {
-                                    obj(dir.getName()) {
-                                        ary("uv", 8, 15, 9, 16)
-                                        put("texture", "#misc")
-                                    }
+                    obj {
+                        ary("from", 11, 15.999, 11)
+                        ary("to", 5, 0.001, 5)
+                        obj("faces") {
+                            for (dir in DIRECTIONS) {
+                                obj(dir.getName()) {
+                                    ary("uv", 8, 15, 9, 16)
+                                    put("texture", "#misc")
                                 }
                             }
                         }
@@ -178,39 +171,46 @@ object CableBlock : Block(
     }
 }
 
-data class ModelTransform(
-    val translation: Vec3d = Vec3d.ZERO, val rotation: Vec3d = Vec3d.ZERO, val scale: Vec3d = Vec3d(1.0, 1.0, 1.0)
-) : Supplier<JsonObject> {
-    override fun get() = JsonBuilder {
-        if (translation != Vec3d.ZERO) ary("translation", translation.x, translation.y, translation.z)
-        if (rotation != Vec3d.ZERO) ary("rotation", rotation.x, rotation.y, rotation.z)
-        if (scale != Vec3d.ZERO) ary("scale", scale.x, scale.y, scale.z)
-    }.element
-}
+private val BlockState.dir0
+    get() = this[Properties.AXIS] towards Direction.AxisDirection.NEGATIVE
+private val BlockState.dir1
+    get() = this[Properties.AXIS] towards Direction.AxisDirection.POSITIVE
 
-enum class TransformationType {
-    THIRDPERSON_LEFT, THIRDPERSON_RIGHT, FIRSTPERSON_LEFT, FIRSTPERSON_RIGHT, GROUND, GUI, FIXED
-}
-
-infix fun <T> T.into(consumer: Consumer<T>) {
-    consumer.accept(this)
-}
-
-infix fun <T, U> Pair<T, U>.into(consumer: BiConsumer<T, U>) {
-    consumer.accept(this.first, this.second)
-}
-
-operator fun <O, S : State<O, S>?> StateManager.Builder<O, S>.plusAssign(it: Property<*>) {
-    add(it)
-}
-
-infix fun <A, B, C> Pair<A, B>.too(third: C) = Triple(first, second, third)
-
-class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(TYPE, pos, state) {
+class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, state), CableTransferPacket.Handler {
+    var packet: CableTransferPacket? = null
+    var forward = true
     companion object : Registerable, HasID by CableBlock {
-        val TYPE: BlockEntityType<CableEntity> = FabricBlockEntityTypeBuilder.create(::CableEntity, CableBlock).build()
+        val type: BlockEntityType<CableEntity> = FabricBlockEntityTypeBuilder.create(::CableEntity, CableBlock).build()
         override fun register() {
-            Registry.register(Registry.BLOCK_ENTITY_TYPE, id, TYPE)
+            Registry.register(Registry.BLOCK_ENTITY_TYPE, id, type)
         }
+    }
+
+    override fun readNbt(nbt: NbtCompound?) {
+        super.readNbt(nbt)
+        packet = nbt?.getCompound("Packet")?.let { CableTransferPacket.fromNbt(it) }
+        forward = nbt?.getBoolean("Negative")?.not() ?: true
+    }
+
+    override fun writeNbt(nbt: NbtCompound?) {
+        if (packet == null) {
+            nbt?.remove("Packet")
+        } else {
+            val c = NbtCompound()
+            packet!!.toNbt(c)
+            nbt?.put("Packet", c)
+            nbt?.putBoolean("Negative", !forward)
+        }
+        super.writeNbt(nbt)
+    }
+
+    override fun recievePacket(packet: CableTransferPacket, direction: Direction) = runCatching {
+        if (this.packet != null) throw IllegalStateException("Cable is already holding a packet")
+        forward = when (direction) {
+            cachedState.dir0 -> true
+            cachedState.dir1 -> false
+            else -> throw IllegalArgumentException("Cannot accept a packet from this direction")
+        }
+        this.packet = packet
     }
 }

@@ -5,7 +5,7 @@ import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
 
 object ExampleMod : ModInitializer {
-	val modId = "ender_cables"
+	val modId = "ender-cables"
 
     internal val logger = LoggerFactory.getLogger("ender-cables")
 
