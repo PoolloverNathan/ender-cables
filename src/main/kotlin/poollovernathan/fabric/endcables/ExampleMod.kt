@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
 object ExampleMod : ModInitializer {
 	val modId = "ender_cables"
 
-    private val logger = LoggerFactory.getLogger("ender-cables")
+    internal val logger = LoggerFactory.getLogger("ender-cables")
 
 	internal val registerables: Array<Registerable> = arrayOf(
 		CableBlock,

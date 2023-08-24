@@ -6,6 +6,10 @@ import com.google.gson.JsonObject
 import java.util.function.Consumer
 import java.util.function.Supplier
 
+@DslMarker
+private annotation class JsonDslMarker {}
+
+@JsonDslMarker
 class JsonBuilder constructor(): Supplier<JsonElement> {
     constructor(builder: JsonBuilder.() -> Unit): this() {
         builder(this)
@@ -58,6 +62,7 @@ class JsonBuilder constructor(): Supplier<JsonElement> {
     override fun get() = element
 }
 
+@JsonDslMarker
 class JsonArrayBuilder constructor(): Supplier<JsonElement> {
     constructor(builder: JsonArrayBuilder.() -> Unit): this() {
         builder(this)
