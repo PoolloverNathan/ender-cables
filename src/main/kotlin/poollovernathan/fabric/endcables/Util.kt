@@ -1,6 +1,8 @@
 package poollovernathan.fabric.endcables
 
 import com.google.gson.JsonObject
+import net.minecraft.item.Item
+import net.minecraft.item.ItemStack
 import net.minecraft.state.State
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.Property
@@ -37,3 +39,5 @@ data class ModelTransform(
 enum class TransformationType {
     THIRDPERSON_LEFT, THIRDPERSON_RIGHT, FIRSTPERSON_LEFT, FIRSTPERSON_RIGHT, GROUND, GUI, FIXED
 }
+
+operator fun Item.times(count: Int) = ItemStack(this, Integer.max(count, this.maxCount))

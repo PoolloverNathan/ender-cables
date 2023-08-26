@@ -3,7 +3,6 @@ package poollovernathan.fabric.endcables
 import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.entity.ItemEntity
-import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NbtCompound
 import net.minecraft.util.Identifier
@@ -11,15 +10,12 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
 import net.minecraft.util.math.Vec3f
+import net.minecraft.util.registry.Registry
 import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
-import java.lang.Integer.max
 import kotlin.IllegalArgumentException
 
 abstract class CableTransferPacket(val type: CableTransferPacketType) {
-    init {
-        assert(this::class.isInstance(type.createPacket()))
-    }
     companion object {
         val registry = FabricRegistryBuilder.createSimple(CableTransferPacketType::class.java, id("cable_transfer_packets")).buildAndRegister()
         fun fromNbt(nbt: NbtCompound): CableTransferPacket? {
@@ -29,7 +25,7 @@ abstract class CableTransferPacket(val type: CableTransferPacketType) {
                 .map { it ?: throw IllegalArgumentException("Identifier does not refer to an entry") }
                 .map { it.createPacket() }
                 .onSuccess { it.readNbt(nbt) }
-                .getOrNull()
+                .getOrThrow()
                 .also { return it }
         }
     }
@@ -39,7 +35,7 @@ abstract class CableTransferPacket(val type: CableTransferPacketType) {
     }
     abstract fun readNbt(nbt: NbtCompound)
     protected abstract fun writeNbt(nbt: NbtCompound)
-    abstract fun getColor(): Int
+    open fun getColor() = Color.white()
     open fun onDie(world: World, pos: Vec3d, dir: Direction?) = Unit
 
 
@@ -54,7 +50,7 @@ abstract class CableTransferPacket(val type: CableTransferPacketType) {
          * Recieves a packet from another Handler.
          * @param packet The packet that was recieved.
          * @param direction The direction the packet is coming from.
-         * @return A {@link Result} with no value. If this resolves successfully, the sender should forget about the packet. Failures can usually be ignored. Usually.
+         * @return A [Result] with no value. If this resolves successfully, the sender should forget about the packet. Failures can usually be ignored. Usually.
          */
         fun recievePacket(packet: CableTransferPacket, direction: Direction): Result<Unit>
 
@@ -62,7 +58,7 @@ abstract class CableTransferPacket(val type: CableTransferPacketType) {
          * A convenience function to send a packet to another Handler.
          * @param packet The packet to send.
          * @param direction The direction to send the packet in.
-         * @return A {@link Result} with no value. This either contains success if {@link #recievePacket} returned success,
+         * @return A [Result] with no value. This either contains success if [recievePacket] returned success,
          */
         fun sendPacket(packet: CableTransferPacket, direction: Direction) = runCatching {
             val targetPos = getPos().offset(direction)
@@ -72,15 +68,20 @@ abstract class CableTransferPacket(val type: CableTransferPacketType) {
                 .getOrElse { throw PacketRefusedError(targetPos, target, it) }
         }
         /**
-         * An alias for {@link #sendPacket}.
+         * An alias for [sendPacket].
          */
         fun CableTransferPacket.send(direction: Direction) = sendPacket(this, direction)
     }
 }
 
 class ItemPacket: CableTransferPacket(ItemPacket) {
-    companion object: CableTransferPacketType {
+    companion object: CableTransferPacketType, HasID, Registerable {
         override fun createPacket(): CableTransferPacket = ItemPacket()
+        override val id = id("item")
+
+        override fun register() {
+            Registry.register(registry, id, this)
+        }
     }
     var item = ItemStack.EMPTY
     override fun readNbt(nbt: NbtCompound) {
@@ -94,7 +95,7 @@ class ItemPacket: CableTransferPacket(ItemPacket) {
         }
     }
 
-    override fun getColor() = 0xffffff
+    override fun getColor() = Color.rgb(52u, 161u, 235u)
 
     override fun onDie(world: World, pos: Vec3d, dir: Direction?) {
         var ejectVelocity = Vec3d(dir?.unitVector ?: Vec3f.ZERO)
@@ -115,5 +116,3 @@ class PacketRefusedError(target: BlockPos, val handler: BlockEntity, cause: Thro
         initCause(cause)
     }
 }
-
-operator fun Item.times(count: Int) = ItemStack(this, max(count, this.maxCount))

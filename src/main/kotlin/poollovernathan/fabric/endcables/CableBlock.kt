@@ -31,13 +31,13 @@ import java.util.function.Consumer
 object CableBlock : Block(
     Settings.of(Material.METAL, MapColor.DARK_GREEN).requiresTool().strength(10.0f, 120.0f)
         .sounds(BlockSoundGroup.NETHERITE).nonOpaque()
-), Registerable, HasID {
+), Registerable, HasID, BlockEntityProvider {
     init {
         defaultState = defaultState.with(Properties.AXIS, Direction.Axis.Y)
     }
 
     override fun getOutlineShape(state: BlockState?, world: BlockView?, pos: BlockPos?, context: ShapeContext?) =
-        ((0.25 to 0.75) to (0.0 to 1.1)).run {
+        ((0.25 to 0.75) to (0.0 to 1.0)).run {
             when (state?.get(Properties.AXIS)) {
                 Direction.Axis.X -> second to first too first
                 Direction.Axis.Y, null -> first to second too first
@@ -96,14 +96,16 @@ object CableBlock : Block(
                     produce(highX = true, highZ = false)
                     produce(highX = false, highZ = true)
                     produce(highX = true, highZ = true)
-                    obj {
-                        ary("from", 11, 15.999, 11)
-                        ary("to", 5, 0.001, 5)
-                        obj("faces") {
-                            for (dir in DIRECTIONS) {
-                                obj(dir.getName()) {
-                                    ary("uv", 8, 15, 9, 16)
-                                    put("texture", "#misc")
+                    if (item) {
+                        obj {
+                            ary("from", 11, 15.999, 11)
+                            ary("to", 5, 0.001, 5)
+                            obj("faces") {
+                                for (dir in DIRECTIONS) {
+                                    obj(dir.getName()) {
+                                        ary("uv", 8, 15, 9, 16)
+                                        put("texture", "#misc")
+                                    }
                                 }
                             }
                         }
@@ -169,6 +171,10 @@ object CableBlock : Block(
 
         })
     }
+
+    override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity? {
+        return CableEntity(pos ?: return null, state ?: return null)
+    }
 }
 
 private val BlockState.dir0
@@ -177,8 +183,9 @@ private val BlockState.dir1
     get() = this[Properties.AXIS] towards Direction.AxisDirection.POSITIVE
 
 class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, state), CableTransferPacket.Handler {
-    var packet: CableTransferPacket? = null
-    var forward = true
+    var packet: CableTransferPacket? = null; private set
+    var forward = true; private set
+    var insertionTime = 0L; private set
     companion object : Registerable, HasID by CableBlock {
         val type: BlockEntityType<CableEntity> = FabricBlockEntityTypeBuilder.create(::CableEntity, CableBlock).build()
         override fun register() {
@@ -188,8 +195,9 @@ class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, s
 
     override fun readNbt(nbt: NbtCompound?) {
         super.readNbt(nbt)
-        packet = nbt?.getCompound("Packet")?.let { CableTransferPacket.fromNbt(it) }
+        packet = ItemPacket() // nbt?.getCompound("Packet")?.let { CableTransferPacket.fromNbt(it) }
         forward = nbt?.getBoolean("Negative")?.not() ?: true
+        insertionTime = nbt?.getLong("InsertionTime")?.takeIf { it != 0L } ?: world?.time ?: 0L
     }
 
     override fun writeNbt(nbt: NbtCompound?) {
@@ -200,6 +208,7 @@ class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, s
             packet!!.toNbt(c)
             nbt?.put("Packet", c)
             nbt?.putBoolean("Negative", !forward)
+            nbt?.putLong("InsertionTime", insertionTime)
         }
         super.writeNbt(nbt)
     }
@@ -211,6 +220,7 @@ class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, s
             cachedState.dir1 -> false
             else -> throw IllegalArgumentException("Cannot accept a packet from this direction")
         }
+        insertionTime = world?.time ?: 0L
         this.packet = packet
     }
 }
