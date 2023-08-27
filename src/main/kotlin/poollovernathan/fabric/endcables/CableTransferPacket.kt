@@ -14,6 +14,7 @@ import net.minecraft.util.registry.Registry
 import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
 import kotlin.IllegalArgumentException
+import kotlin.jvm.optionals.getOrElse
 
 abstract class CableTransferPacket(val type: CableTransferPacketType) {
     companion object {
@@ -31,7 +32,10 @@ abstract class CableTransferPacket(val type: CableTransferPacketType) {
     }
     fun toNbt(nbt: NbtCompound) {
         writeNbt(nbt)
-        nbt.putString("Type", registry.getKey(type).toString())
+        registry.getKey(type).getOrElse {
+            nbt.remove("Type")
+            return
+        }.also { nbt.putString("Type", it.value.toString()) }
     }
     abstract fun readNbt(nbt: NbtCompound)
     protected abstract fun writeNbt(nbt: NbtCompound)

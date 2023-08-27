@@ -12,7 +12,8 @@ object ExampleMod : ModInitializer {
 	internal val registerables: Array<Registerable> = arrayOf(
 		CableBlock,
 		CableEntity,
-		ItemPacket
+		ItemPacket,
+		RiftPearlItem
 	)
 
 	override fun onInitialize() {

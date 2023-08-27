@@ -8,12 +8,16 @@ import net.minecraft.block.*
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.data.client.BlockStateModelGenerator
+import net.minecraft.data.client.BlockStateModelGenerator.createAxisRotatedBlockState
 import net.minecraft.data.client.ItemModelGenerator
 import net.minecraft.data.server.RecipeProvider
 import net.minecraft.data.server.recipe.RecipeJsonProvider
 import net.minecraft.data.server.recipe.ShapedRecipeJsonBuilder
 import net.minecraft.item.*
 import net.minecraft.nbt.NbtCompound
+import net.minecraft.network.Packet
+import net.minecraft.network.listener.ClientPlayPacketListener
+import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket
 import net.minecraft.sound.BlockSoundGroup
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.Properties
@@ -25,7 +29,6 @@ import net.minecraft.util.registry.Registry
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
 import poollovernathan.fabric.endcables.ExampleMod.id
-import java.lang.IllegalArgumentException
 import java.util.function.Consumer
 
 object CableBlock : Block(
@@ -65,7 +68,7 @@ object CableBlock : Block(
 
 
     override fun registerDatagen(generator: FabricDataGenerator) {
-        generator.addProvider(object : FabricModelProvider(generator) {
+        generator.models {
             val modelId = id("block/cable")
             fun createModel(item: Boolean = false) = JsonBuilder {
                 obj("textures") {
@@ -147,29 +150,21 @@ object CableBlock : Block(
                 }
             }
 
-            override fun generateBlockStateModels(blockStateModelGenerator: BlockStateModelGenerator?) {
-                if (blockStateModelGenerator == null) {
-                    throw NullPointerException("BlockStateModelGenerator was null")
-                }
-                BlockStateModelGenerator.createAxisRotatedBlockState(
-                    CableBlock, modelId
-                ) into blockStateModelGenerator.blockStateCollector
-                modelId to createModel(false) into blockStateModelGenerator.modelCollector
+            blockstate {
+                createAxisRotatedBlockState(CableBlock, modelId) into blockStateCollector
+                modelId to createModel(false) into modelCollector
             }
 
-            override fun generateItemModels(itemModelGenerator: ItemModelGenerator?) {
-                id.run { Identifier(namespace, "item/$path") } to createModel(true) into itemModelGenerator!!.writer
+            item {
+                id.run { Identifier(namespace, "item/$path") } to createModel(true) into writer
             }
-        })
-        generator.addProvider(object : FabricRecipeProvider(generator) {
-            override fun generateRecipes(exporter: Consumer<RecipeJsonProvider>) {
-                ShapedRecipeJsonBuilder.create(CableBlock, 24)
-                    .criterion("ender_pearl", RecipeProvider.conditionsFromItem(Items.ENDER_PEARL))
-                    .input('g', Items.GOLD_INGOT).input('e', Items.ENDER_PEARL).pattern("geg").pattern("   ")
-                    .pattern("geg").offerTo(exporter)
-            }
-
-        })
+        }
+        generator.recipes {
+            ShapedRecipeJsonBuilder.create(CableBlock, 24)
+                .criterion("ender_pearl", RecipeProvider.conditionsFromItem(Items.ENDER_PEARL))
+                .input('g', Items.GOLD_INGOT).input('e', Items.ENDER_PEARL).pattern("geg").pattern("   ")
+                .pattern("geg").offerTo(it)
+        }
     }
 
     override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity? {
@@ -212,6 +207,12 @@ class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, s
         }
         super.writeNbt(nbt)
     }
+
+    override fun toUpdatePacket(): Packet<ClientPlayPacketListener?> = BlockEntityUpdateS2CPacket.create(this)
+
+    override fun toInitialChunkDataNbt(): NbtCompound? = createNbt()
+
+
 
     override fun recievePacket(packet: CableTransferPacket, direction: Direction) = runCatching {
         if (this.packet != null) throw IllegalStateException("Cable is already holding a packet")
