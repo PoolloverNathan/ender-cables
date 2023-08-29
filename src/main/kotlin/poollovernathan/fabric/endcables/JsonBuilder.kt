@@ -26,7 +26,7 @@ class JsonBuilder constructor(): Supplier<JsonElement> {
         element.add(key, ary.element)
         return ary;
     }
-    fun ary(key: String, builder: JsonArrayBuilder.() -> Unit) = builder(ary(key))
+    inline fun ary(key: String, builder: JsonArrayBuilder.() -> Unit) = builder(ary(key))
     fun ary(key: String, vararg elements: JsonElement) = ary(key) {
         elements.forEach {
             put(it)
@@ -57,7 +57,7 @@ class JsonBuilder constructor(): Supplier<JsonElement> {
         element.add(key, obj.element)
         return obj;
     }
-    fun obj(key: String, builder: JsonBuilder.() -> Unit) = builder(obj(key))
+    inline fun obj(key: String, builder: JsonBuilder.() -> Unit) = builder(obj(key))
 
     override fun get() = element
 }

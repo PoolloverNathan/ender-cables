@@ -7,6 +7,11 @@ import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider
 import net.minecraft.data.client.BlockStateModelGenerator
 import net.minecraft.data.client.ItemModelGenerator
 import net.minecraft.data.server.recipe.RecipeJsonProvider
+import net.minecraft.data.server.recipe.ShapedRecipeJsonBuilder
+import net.minecraft.data.server.recipe.ShapelessRecipeJsonBuilder
+import net.minecraft.item.ItemConvertible
+import net.minecraft.item.ItemStack
+import java.awt.Shape
 import java.util.function.Consumer
 
 fun FabricDataGenerator.recipes(generate: (Consumer<RecipeJsonProvider>) -> Unit) {
@@ -15,6 +20,19 @@ fun FabricDataGenerator.recipes(generate: (Consumer<RecipeJsonProvider>) -> Unit
             generate(exporter ?: return)
         }
     })
+}
+
+fun Consumer<RecipeJsonProvider>?.shaped(output: ItemConvertible, builder: ShapedRecipeJsonBuilder.() -> Unit) {
+    ShapedRecipeJsonBuilder.create(output).also(builder).offerTo(this)
+}
+fun Consumer<RecipeJsonProvider>?.shaped(output: ItemStack, builder: ShapedRecipeJsonBuilder.() -> Unit) {
+    ShapedRecipeJsonBuilder.create(output.item, output.count).also(builder).offerTo(this)
+}
+fun Consumer<RecipeJsonProvider>?.shapeless(output: ItemConvertible, builder: ShapelessRecipeJsonBuilder.() -> Unit) {
+    ShapelessRecipeJsonBuilder.create(output).also(builder).offerTo(this)
+}
+fun Consumer<RecipeJsonProvider>?.shapeless(output: ItemStack, builder: ShapelessRecipeJsonBuilder.() -> Unit) {
+    ShapelessRecipeJsonBuilder.create(output.item, output.count).also(builder).offerTo(this)
 }
 
 fun FabricDataGenerator.language(generate: FabricLanguageProvider.TranslationBuilder.() -> Unit) {

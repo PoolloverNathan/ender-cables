@@ -74,7 +74,7 @@ object CableBlock : Block(
                 obj("textures") {
                     put("cable", id("block/cable").toString())
                     put("misc", id("block/misc0").toString())
-                    put("particle", "#side")
+                    put("particle", "#cable")
                 }
                 ary("elements") {
                     fun produce(highX: Boolean, highZ: Boolean) = obj {
