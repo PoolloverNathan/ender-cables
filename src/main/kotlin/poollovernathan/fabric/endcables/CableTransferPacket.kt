@@ -1,10 +1,13 @@
 package poollovernathan.fabric.endcables
 
 import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder
+import net.minecraft.block.BlockState
 import net.minecraft.block.entity.BlockEntity
+import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.entity.ItemEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NbtCompound
+import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
@@ -119,4 +122,10 @@ class PacketRefusedError(target: BlockPos, val handler: BlockEntity, cause: Thro
     init {
         initCause(cause)
     }
+}
+
+abstract class ClientSyncedBlockEntity(type: BlockEntityType<*>, pos: BlockPos, state: BlockState):
+    BlockEntity(type, pos, state) {
+    override fun toUpdatePacket() = BlockEntityUpdateS2CPacket.create(this);
+    override fun toInitialChunkDataNbt() = createNbt()
 }

@@ -10,8 +10,11 @@ import net.minecraft.block.MapColor
 import net.minecraft.block.Material
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityType
+import net.minecraft.entity.LivingEntity
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NbtCompound
+import net.minecraft.nbt.NbtElement
 import net.minecraft.sound.BlockSoundGroup
 import net.minecraft.state.State
 import net.minecraft.state.StateManager
@@ -106,4 +109,9 @@ class IDBlockEntityType<T: BlockEntity>(override val id: Identifier, vararg bloc
     override fun register() {
         Registry.BLOCK_ENTITY_TYPE += this
     }
+}
+
+operator fun NbtCompound.set(key: String, value: NbtElement) = put(key, value)
+private fun LivingEntity.teleport(destination: Vec3d) {
+    teleport(destination.x, destination.y, destination.z)
 }
