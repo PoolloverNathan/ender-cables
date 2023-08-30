@@ -8,32 +8,33 @@ import net.minecraft.util.math.Direction
 
 interface ProxyInventory: Inventory, SidedInventory {
     val targetInventory: Inventory
-    override fun clear() = targetInventory.clear()
+    private val safeInventory; get() = targetInventory.takeUnless { it == this } ?: DummyInventory
+    override fun clear() = safeInventory.clear()
 
-    override fun size() = targetInventory.size()
+    override fun size() = safeInventory.size()
 
-    override fun isEmpty() = targetInventory.isEmpty()
+    override fun isEmpty() = safeInventory.isEmpty()
 
-    override fun getStack(slot: Int) = targetInventory.getStack(slot)
+    override fun getStack(slot: Int) = safeInventory.getStack(slot)
 
-    override fun removeStack(slot: Int, amount: Int) = targetInventory.removeStack(slot, amount)
+    override fun removeStack(slot: Int, amount: Int) = safeInventory.removeStack(slot, amount)
 
-    override fun removeStack(slot: Int) = targetInventory.removeStack(slot)
+    override fun removeStack(slot: Int) = safeInventory.removeStack(slot)
 
-    override fun setStack(slot: Int, stack: ItemStack?) = targetInventory.setStack(slot, stack)
+    override fun setStack(slot: Int, stack: ItemStack?) = safeInventory.setStack(slot, stack)
 
-    override fun markDirty() = targetInventory.markDirty()
+    override fun markDirty() = safeInventory.markDirty()
 
-    override fun canPlayerUse(player: PlayerEntity?) = targetInventory.canPlayerUse(player)
-    override fun getAvailableSlots(side: Direction?) = targetInventory.let {
+    override fun canPlayerUse(player: PlayerEntity?) = safeInventory.canPlayerUse(player)
+    override fun getAvailableSlots(side: Direction?) = safeInventory.let {
         if (it is SidedInventory) it.getAvailableSlots(side) else (0..<it.size()).toList().toIntArray()
     }
 
     override fun canInsert(slot: Int, stack: ItemStack?, dir: Direction?) =
-        targetInventory.let { if (it is SidedInventory) it.canInsert(slot, stack, dir) else true }
+        safeInventory.let { if (it is SidedInventory) it.canInsert(slot, stack, dir) else true }
 
     override fun canExtract(slot: Int, stack: ItemStack?, dir: Direction?) =
-        targetInventory.let { if (it is SidedInventory) it.canExtract(slot, stack, dir) else true }
+        safeInventory.let { if (it is SidedInventory) it.canExtract(slot, stack, dir) else true }
 }
 object DummyInventory: Inventory, SidedInventory {
     override fun clear() = Unit
