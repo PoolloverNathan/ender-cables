@@ -10,6 +10,7 @@ import net.minecraft.block.entity.BlockEntityTicker
 import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.data.client.VariantsBlockStateSupplier
 import net.minecraft.data.server.RecipeProvider
+import net.minecraft.entity.decoration.ItemFrameEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.inventory.Inventory
 import net.minecraft.item.BlockItem
@@ -17,6 +18,9 @@ import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items.*
 import net.minecraft.nbt.NbtCompound
+import net.minecraft.sound.SoundCategory
+import net.minecraft.sound.SoundEvent
+import net.minecraft.sound.SoundEvents
 import net.minecraft.util.ActionResult
 import net.minecraft.util.Hand
 import net.minecraft.util.Rarity
@@ -25,6 +29,7 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.registry.Registry
 import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
+import poollovernathan.fabric.endcables.ExampleMod.vid
 import javax.swing.Action
 
 object RiftBlock: Block(netherite(MapColor.DARK_AQUA)), HasID, Registerable, BlockEntityProvider, BlockEntityTicker<RiftBlockEntity> {
@@ -61,19 +66,20 @@ object RiftBlock: Block(netherite(MapColor.DARK_AQUA)), HasID, Registerable, Blo
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onUse(
-        state: BlockState?,
-        world: World?,
-        pos: BlockPos?,
-        player: PlayerEntity?,
-        hand: Hand?,
-        hit: BlockHitResult?
+        state: BlockState,
+        world: World,
+        pos: BlockPos,
+        player: PlayerEntity,
+        hand: Hand,
+        hit: BlockHitResult
     ): ActionResult {
         player ?: return ActionResult.PASS
         //if (world?.isClient == true) return ActionResult.PASS
-        val entity = world?.getBlockEntity(pos) as? RiftBlockEntity ?: return ActionResult.PASS
+        val entity = world.getBlockEntity(pos) as? RiftBlockEntity ?: return ActionResult.PASS
         val handItem = player.getStackInHand(hand) ?: ItemStack.EMPTY
-        if (entity.pearl.isEmpty && handItem.item != RiftPearlItem) return ActionResult.PASS
+        if (entity.pearl?.isEmpty != false && handItem.item != RiftPearlItem) return ActionResult.PASS
         entity.swapPearl(handItem, player::giveItemStack)
+        world.playSound(null, pos, if (entity.pearl?.isEmpty == false) SoundEvents.BLOCK_END_PORTAL_FRAME_FILL else SoundEvents.ENTITY_ITEM_FRAME_REMOVE_ITEM, SoundCategory.PLAYERS, 1f, 1f)
         return ActionResult.SUCCESS;
     }
 

@@ -13,6 +13,8 @@ import net.minecraft.item.Items.ENDER_PEARL
 import net.minecraft.item.Items.GLOWSTONE_DUST
 import net.minecraft.nbt.NbtInt
 import net.minecraft.nbt.NbtList
+import net.minecraft.sound.SoundCategory
+import net.minecraft.sound.SoundEvents
 import net.minecraft.util.ActionResult
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.registry.Registry
@@ -28,8 +30,9 @@ object RiftPearlItem: Item(Settings().group(ItemGroup.REDSTONE).maxCount(1)), Re
 
     override fun useOnBlock(context: ItemUsageContext): ActionResult {
         context.player ?: return ActionResult.PASS
-        if (context.world.getBlockEntity(context.blockPos) is Inventory) {
+        if (getTarget(context.stack) == null && context.world.getBlockEntity(context.blockPos) is Inventory) {
             setTarget(context.stack, context.blockPos)
+            context.world.playSound(null, context.blockPos, SoundEvents.ITEM_LODESTONE_COMPASS_LOCK, SoundCategory.PLAYERS, 1f, 1f)
             return ActionResult.SUCCESS
         }
         return ActionResult.PASS
