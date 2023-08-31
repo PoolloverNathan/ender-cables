@@ -23,6 +23,7 @@ import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
+import net.minecraft.util.math.Vec3f
 import net.minecraft.util.registry.Registry
 import java.util.function.BiConsumer
 import java.util.function.Consumer
@@ -115,3 +116,5 @@ operator fun NbtCompound.set(key: String, value: NbtElement) = put(key, value)
 private fun LivingEntity.teleport(destination: Vec3d) {
     teleport(destination.x, destination.y, destination.z)
 }
+
+operator fun Vec3f.times(scale: Float) = Vec3f(x * scale, y * scale, z * scale)

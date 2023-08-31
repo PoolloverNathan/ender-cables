@@ -3,19 +3,19 @@ package poollovernathan.fabric.endcables
 import asa
 import asan
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator
-import net.minecraft.block.Block
-import net.minecraft.block.BlockEntityProvider
-import net.minecraft.block.BlockState
-import net.minecraft.block.MapColor
+import net.fabricmc.fabric.mixin.`object`.builder.AbstractBlockAccessor
+import net.fabricmc.fabric.mixin.`object`.builder.AbstractBlockSettingsAccessor
+import net.minecraft.block.*
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityTicker
 import net.minecraft.block.entity.BlockEntityType
-import net.minecraft.data.client.VariantsBlockStateSupplier
+import net.minecraft.data.client.*
 import net.minecraft.data.server.RecipeProvider
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.inventory.Inventory
 import net.minecraft.item.BlockItem
 import net.minecraft.item.Item
+import net.minecraft.item.ItemGroup
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items.*
 import net.minecraft.nbt.NbtCompound
@@ -33,23 +33,25 @@ import net.minecraft.util.registry.Registry
 import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
 
-object RiftBlock: Block(netherite(MapColor.DARK_AQUA)), HasID, Registerable, BlockEntityProvider, BlockEntityTicker<RiftBlockEntity> {
+object RiftBlock: Block(netherite(MapColor.DARK_AQUA).nonOpaque().luminance(Blocks.NETHER_PORTAL.settings.luminance)), HasID, Registerable, BlockEntityProvider, BlockEntityTicker<RiftBlockEntity> {
     override val id = id("rift")
 
     override fun register() {
         Registry.BLOCK += RiftBlock
-        Registry.ITEM += BlockItem(RiftBlock, Item.Settings().uncommon) to id
+        Registry.ITEM += BlockItem(RiftBlock, Item.Settings().uncommon.group(ItemGroup.REDSTONE)) to id
         RiftBlockEntity.register()
     }
 
     override fun registerDatagen(generator: FabricDataGenerator) {
         generator.models {
             blockstate {
-                blockStateCollector.accept(VariantsBlockStateSupplier.create(RiftBlock))
+                blockStateCollector.accept(VariantsBlockStateSupplier.create(RiftBlock, BlockStateVariant().put(
+                    VariantSettings.MODEL, blockModel)))
             }
             item {
                 writer gets id to JsonBuilder {
-                    put("parent", id.run { Identifier(namespace, "block/$path") }.toString())
+                    put("parent", blockModel.toString())
+                    Models.CUBE
                 }
             }
         }
@@ -124,6 +126,10 @@ object RiftBlock: Block(netherite(MapColor.DARK_AQUA)), HasID, Registerable, Blo
 
 inline fun <reified T> Any.coerce() = this as? T
 inline infix fun <T> T?.elvis(fallback: () -> T) = this ?: fallback()
+private val HasID.itemModel: Identifier
+    get() = Identifier(id.namespace, "item/${id.path}")
+private val HasID.blockModel: Identifier
+    get() = Identifier(id.namespace, "block/${id.path}")
 inline val <T> T.nonnull; get() = elvis { throw AssertionError("Non-null assertion failed") }
 infix fun ItemStack.equal(other: ItemStack) = ItemStack.areEqual(this, other)
 inline val Item.Settings.common; get() = rarity(Rarity.COMMON)
@@ -133,7 +139,7 @@ inline val Item.Settings.epic; get() = rarity(Rarity.EPIC)
 
 
 class RiftBlockEntity(pos: BlockPos, state: BlockState): ClientSyncedBlockEntity(type, pos, state), ProxyInventory {
-    var pearl = ItemStack.EMPTY
+    var pearl: ItemStack? = ItemStack.EMPTY
         private set
         get() = field ?: ItemStack.EMPTY
     fun setPearl(pearl: ItemStack?) = run {
@@ -155,7 +161,7 @@ class RiftBlockEntity(pos: BlockPos, state: BlockState): ClientSyncedBlockEntity
     }
 
     fun swapPearl(source: ItemStack?, oldConsumer: (ItemStack) -> Unit) {
-        if (pearl == null || !pearl.isEmpty) oldConsumer(pearl)
+        if (pearl == null || !pearl!!.isEmpty) oldConsumer(pearl!!)
         setPearl(ItemStack.EMPTY)
         takePearl(source)
         markDirty()
@@ -179,7 +185,7 @@ class RiftBlockEntity(pos: BlockPos, state: BlockState): ClientSyncedBlockEntity
 
     override fun writeNbt(nbt: NbtCompound?) {
         nbt!!
-        NbtCompound().takeUnless { pearl?.isEmpty ?: true }?.also { pearl.writeNbt(it) }?.also { nbt.put("Pearl", it) }
+        NbtCompound().takeUnless { pearl?.isEmpty ?: true }?.also { pearl?.writeNbt(it) }?.also { nbt.put("Pearl", it) }
         if (cooldown > 0u) nbt.putInt("Cooldown", cooldown asan Int)
     }
 
@@ -189,3 +195,7 @@ class RiftBlockEntity(pos: BlockPos, state: BlockState): ClientSyncedBlockEntity
     }
 }
 
+
+inline val AbstractBlock.settings
+    @Suppress("UnstableApiUsage")
+    get() = (this as AbstractBlockAccessor).settings as AbstractBlockSettingsAccessor

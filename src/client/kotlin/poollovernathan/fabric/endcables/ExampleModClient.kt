@@ -5,6 +5,7 @@ import net.fabricmc.api.ClientModInitializer
 object ExampleModClient : ClientModInitializer {
 	internal var clientRegisterables = listOf<ClientRegisterable>(
 		CableRenderer,
+		RiftRenderer,
 		RiftPearlItemColorProvider
 	)
 

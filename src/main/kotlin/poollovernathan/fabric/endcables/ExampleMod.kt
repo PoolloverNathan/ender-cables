@@ -13,8 +13,8 @@ object ExampleMod : ModInitializer {
 		CableBlock,
 		CableEntity,
 		ItemPacket,
-		RiftPearlItem,
-		RiftBlock
+		RiftBlock,
+		RiftPearlItem
 	)
 
 	override fun onInitialize() {

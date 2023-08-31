@@ -14,7 +14,7 @@ import net.minecraft.item.ItemStack
 import java.awt.Shape
 import java.util.function.Consumer
 
-fun FabricDataGenerator.recipes(generate: (Consumer<RecipeJsonProvider>) -> Unit) {
+inline fun FabricDataGenerator.recipes(crossinline generate: (Consumer<RecipeJsonProvider>) -> Unit) {
     addProvider(object: FabricRecipeProvider(this) {
         override fun generateRecipes(exporter: Consumer<RecipeJsonProvider>?) {
             generate(exporter ?: return)
@@ -22,20 +22,20 @@ fun FabricDataGenerator.recipes(generate: (Consumer<RecipeJsonProvider>) -> Unit
     })
 }
 
-fun Consumer<RecipeJsonProvider>?.shaped(output: ItemConvertible, builder: ShapedRecipeJsonBuilder.() -> Unit) {
+inline fun Consumer<RecipeJsonProvider>?.shaped(output: ItemConvertible, builder: ShapedRecipeJsonBuilder.() -> Unit) {
     ShapedRecipeJsonBuilder.create(output).also(builder).offerTo(this)
 }
-fun Consumer<RecipeJsonProvider>?.shaped(output: ItemStack, builder: ShapedRecipeJsonBuilder.() -> Unit) {
+inline fun Consumer<RecipeJsonProvider>?.shaped(output: ItemStack, builder: ShapedRecipeJsonBuilder.() -> Unit) {
     ShapedRecipeJsonBuilder.create(output.item, output.count).also(builder).offerTo(this)
 }
-fun Consumer<RecipeJsonProvider>?.shapeless(output: ItemConvertible, builder: ShapelessRecipeJsonBuilder.() -> Unit) {
+inline fun Consumer<RecipeJsonProvider>?.shapeless(output: ItemConvertible, builder: ShapelessRecipeJsonBuilder.() -> Unit) {
     ShapelessRecipeJsonBuilder.create(output).also(builder).offerTo(this)
 }
-fun Consumer<RecipeJsonProvider>?.shapeless(output: ItemStack, builder: ShapelessRecipeJsonBuilder.() -> Unit) {
+inline fun Consumer<RecipeJsonProvider>?.shapeless(output: ItemStack, builder: ShapelessRecipeJsonBuilder.() -> Unit) {
     ShapelessRecipeJsonBuilder.create(output.item, output.count).also(builder).offerTo(this)
 }
 
-fun FabricDataGenerator.language(generate: FabricLanguageProvider.TranslationBuilder.() -> Unit) {
+inline fun FabricDataGenerator.language(crossinline generate: FabricLanguageProvider.TranslationBuilder.() -> Unit) {
     addProvider(object: FabricLanguageProvider(this) {
         override fun generateTranslations(translationBuilder: TranslationBuilder?) {
             generate(translationBuilder ?: return)
@@ -43,7 +43,7 @@ fun FabricDataGenerator.language(generate: FabricLanguageProvider.TranslationBui
     })
 }
 
-fun FabricDataGenerator.models(generate: ModelGenerationContext.() -> Unit) {
+inline fun FabricDataGenerator.models(crossinline generate: ModelGenerationContext.() -> Unit) {
     addProvider {
         ModelGenerationContext(it).also { generate(it) }
     }
