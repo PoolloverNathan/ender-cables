@@ -47,13 +47,22 @@ class RiftRenderer private constructor(private val ctx: BlockEntityRendererFacto
                         vertexConsumers.render(RenderLayer.getEndGateway()) { layer ->
                             outline.renderCuboid(entry, layer, 15, 15, 1f, 1f, 1f, 1f)
                         }
-                        scale(-0.5f, -0.5f, -0.5f)
-                        multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(90f))
-                        multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(((world?.time ?: 0) + tickDelta)))
-                        minecraft.itemRenderer.renderItem(it, ModelTransformation.Mode.FIXED, 15, 15, this, vertexConsumers, 0)
                     }
-                    world!!.getBlockEntity(target)?.takeIf { it is Inventory }?.also {
-                        minecraft.blockEntityRenderDispatcher.render(it, tickDelta, matrices, vertexConsumers)
+                    world?.getBlockEntity(target)?.takeIf { it is Inventory }.also {
+                        push { entry ->
+                            val angle = (world?.time ?: 0) + tickDelta
+                            translate(0.5, 0.5, 0.5)
+                            scale(0.5f, 0.5f, 0.5f)
+                            if (it != null) {
+                                multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(angle))
+                                translate(-0.5, -0.5, -0.5)
+                                minecraft.blockEntityRenderDispatcher.render(it, tickDelta, matrices, vertexConsumers)
+                            } else {
+                                multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(90f))
+                                multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(angle))
+                                minecraft.itemRenderer.renderItem(it, ModelTransformation.Mode.FIXED, 15, 15, this, vertexConsumers, 0)
+                            }
+                        }
                     }
                 }
             }
