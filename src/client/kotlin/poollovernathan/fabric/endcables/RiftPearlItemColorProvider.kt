@@ -8,7 +8,7 @@ import net.minecraft.item.ItemStack
 
 object RiftPearlItemColorProvider: ItemColorProvider, ClientRegisterable {
     override fun getColor(stack: ItemStack?, tintIndex: Int): Int {
-        return if (RiftPearlItem.getTarget(stack ?: ItemStack.EMPTY) == null) {
+        return if (RiftPearlItem.getTarget(stack ?: ItemStack.EMPTY).isEmpty) {
             Color(1.0, 0.0, 0.0)
         } else {
             Color(1.0, 0.5, 1.0)

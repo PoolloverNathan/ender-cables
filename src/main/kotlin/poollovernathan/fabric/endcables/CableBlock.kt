@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.`object`.builder.v1.block.entity.FabricBlockEntit
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction
 import net.minecraft.block.*
 import net.minecraft.block.entity.BlockEntity
+import net.minecraft.block.entity.BlockEntityTicker
 import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.data.client.BlockStateModelGenerator.createAxisRotatedBlockState
 import net.minecraft.data.server.RecipeProvider
@@ -25,6 +26,7 @@ import net.minecraft.util.registry.Registry
 import net.minecraft.util.shape.VoxelShape
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
+import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
 import java.util.*
 
@@ -171,6 +173,26 @@ object CableBlock : Block(
     override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity? {
         return CableEntity(pos ?: return null, state ?: return null)
     }
+
+    override fun <T: BlockEntity> getTicker(
+        world: World,
+        state: BlockState,
+        type: BlockEntityType<T>
+    ): BlockEntityTicker<T>? = if (type !== CableEntity.type) null else object: BlockEntityTicker<CableEntity> {
+        override fun tick(world: World, pos: BlockPos, state: BlockState, blockEntity: CableEntity) {
+            blockEntity.apply {
+                if (insertionTime.value <= world.time) return
+                val slot = packets.packets.find { it.value.isPresent } ?: return
+                newTransaction { t ->
+                    val packet = slot.value.get() // found a present value earlier
+                    if (packet.send(getOutput(), t)) {
+                        slot[t] = Optional.empty()
+                        t.commit()
+                    }
+                }
+            }
+        }
+    }.coerce()
 }
 
 private val BlockState.dir0
@@ -210,7 +232,11 @@ class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, s
 
     override fun toInitialChunkDataNbt(): NbtCompound? = createNbt()
 
-
+    fun getOutput(): Direction = if (forward.value) {
+        cachedState.dir1
+    } else {
+        cachedState.dir0
+    }
 
     override fun receivePacket(packet: CableTransferPacket, direction: Direction, @Suppress("UnstableApiUsage") transaction: Transaction) = run {
         transaction {

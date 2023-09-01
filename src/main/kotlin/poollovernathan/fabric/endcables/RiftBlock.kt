@@ -30,6 +30,7 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.registry.Registry
 import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
+import kotlin.jvm.optionals.getOrNull
 
 @Suppress("UnstableApiUsage")
 object RiftBlock: Block(netherite(MapColor.DARK_AQUA).nonOpaque().luminance(Blocks.NETHER_PORTAL.settings.luminance)), HasID, Registerable, BlockEntityProvider, BlockEntityTicker<RiftBlockEntity> {
@@ -167,7 +168,7 @@ class RiftBlockEntity(pos: BlockPos, state: BlockState): ClientSyncedBlockEntity
     val target
         get() = RiftPearlItem.getTarget(pearl)
     override val targetInventory
-        get() = target?.let { world?.getBlockEntity(it) }?.coerce<Inventory>() ?: DummyInventory
+        get() = target.getOrNull()?.let { world?.getBlockEntity(it) as? Inventory } ?: DummyInventory
 
     var cooldown: UInt = 0u
     companion object: HasID by RiftBlock, Registerable {

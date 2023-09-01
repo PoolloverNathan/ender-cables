@@ -19,6 +19,7 @@ import net.minecraft.util.ActionResult
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.registry.Registry
 import poollovernathan.fabric.endcables.ExampleMod.id
+import java.util.*
 
 
 object RiftPearlItem: Item(Settings().group(ItemGroup.REDSTONE).maxCount(1)), Registerable, HasID {
@@ -30,7 +31,7 @@ object RiftPearlItem: Item(Settings().group(ItemGroup.REDSTONE).maxCount(1)), Re
 
     override fun useOnBlock(context: ItemUsageContext): ActionResult {
         context.player ?: return ActionResult.PASS
-        if (getTarget(context.stack) == null && context.world.getBlockEntity(context.blockPos) is Inventory) {
+        if (getTarget(context.stack).isEmpty && context.world.getBlockEntity(context.blockPos) is Inventory) {
             setTarget(context.stack, context.blockPos)
             context.world.playSound(null, context.blockPos, SoundEvents.ITEM_LODESTONE_COMPASS_LOCK, SoundCategory.PLAYERS, 1f, 1f)
             return ActionResult.SUCCESS
@@ -56,10 +57,10 @@ object RiftPearlItem: Item(Settings().group(ItemGroup.REDSTONE).maxCount(1)), Re
         }
     }
 
-    fun getTarget(stack: ItemStack?): BlockPos? {
-        if (stack?.item != RiftPearlItem) return null
-        val nbt = stack.nbt?.getList("Target", NbtInt.INT_TYPE.toInt()).takeIf { (it?.size ?: 0) == 3 } ?: return null
-        return BlockPos(nbt.getInt(0), nbt.getInt(1), nbt.getInt(2))
+    fun getTarget(stack: ItemStack?): Optional<BlockPos> {
+        if (stack?.item != RiftPearlItem) return Optional.empty()
+        val nbt = stack.nbt?.getList("Target", NbtInt.INT_TYPE.toInt()).takeIf { (it?.size ?: 0) == 3 } ?: return Optional.empty()
+        return Optional.of(BlockPos(nbt.getInt(0), nbt.getInt(1), nbt.getInt(2)))
     }
     fun setTarget(stack: ItemStack, target: BlockPos?) {
         if (stack.item != RiftPearlItem) return

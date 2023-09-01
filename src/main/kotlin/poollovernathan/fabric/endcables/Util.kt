@@ -126,3 +126,11 @@ inline operator fun<R> TransactionContext?.invoke(block: (Transaction) -> R) = T
 
 @Suppress("UnstableApiUsage")
 inline fun<R> newTransaction(block: (Transaction) -> R) = null(block)
+
+inline fun<R> stackOverflowFallback(value: R, block: () -> R) = try {
+    block()
+} catch (e: StackOverflowError) {
+    value
+}
+
+inline fun<R> stackOverflowFallback(block: () -> R) = stackOverflowFallback(Unit, block)

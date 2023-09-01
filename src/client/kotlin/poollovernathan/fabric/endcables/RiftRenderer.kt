@@ -10,6 +10,7 @@ import net.minecraft.client.render.model.json.ModelTransformation
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.inventory.Inventory
 import net.minecraft.util.math.Vec3f
+import kotlin.jvm.optionals.getOrNull
 
 class RiftRenderer private constructor(private val ctx: BlockEntityRendererFactory.Context?) :
     BlockEntityRenderer<RiftBlockEntity> {
@@ -30,6 +31,16 @@ class RiftRenderer private constructor(private val ctx: BlockEntityRendererFacto
         vertexConsumers: VertexConsumerProvider,
         light: Int,
         overlay: Int
+    ) = render(entity, tickDelta, matrices, vertexConsumers, light, overlay, 0u)
+
+    fun render(
+        entity: RiftBlockEntity,
+        tickDelta: Float,
+        matrices: MatrixStack,
+        vertexConsumers: VertexConsumerProvider,
+        light: Int,
+        overlay: Int,
+        stackDepth: UInt
     ) {
         entity.apply {
             matrices.apply {
@@ -41,19 +52,43 @@ class RiftRenderer private constructor(private val ctx: BlockEntityRendererFacto
                             outline.renderCuboid(entry, layer, 15, 15, 1f, 1f, 1f, 1f)
                         }
                     }
-                    world?.getBlockEntity(target)?.takeIf { it is Inventory }.also {
-                        push { entry ->
-                            val angle = (world?.time ?: 0) + tickDelta
-                            translate(0.5, 0.5, 0.5)
-                            scale(0.5f, 0.5f, 0.5f)
-                            if (it != null) {
-                                multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(angle))
-                                translate(-0.5, -0.5, -0.5)
-                                minecraft.blockEntityRenderDispatcher.render(it, tickDelta, matrices, vertexConsumers)
-                            } else {
-                                multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(90f))
-                                multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(angle))
-                                minecraft.itemRenderer.renderItem(item, ModelTransformation.Mode.FIXED, 15, 15, this, vertexConsumers, 0)
+                    if (target.isPresent) {
+                        world?.getBlockEntity(target.get())?.takeIf { it is Inventory }.also {
+                            push { entry ->
+                                val angle = (world?.time ?: 0) + tickDelta
+                                translate(0.5, 0.5, 0.5)
+                                scale(0.5f, 0.5f, 0.5f)
+                                if (it != null && stackDepth < 512u) {
+                                    multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(angle))
+                                    translate(-0.5, -0.5, -0.5)
+                                    if (it.type == RiftBlockEntity.type) {
+                                        render(
+                                            entity,
+                                            tickDelta,
+                                            matrices,
+                                            vertexConsumers,
+                                            light,
+                                            overlay,
+                                            stackDepth + 1u
+                                        )
+                                    } else {
+                                        minecraft.blockEntityRenderDispatcher.render(
+                                            it, tickDelta, matrices, vertexConsumers
+                                        )
+                                    }
+                                } else {
+                                    multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(90f))
+                                    multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(angle))
+                                    minecraft.itemRenderer.renderItem(
+                                        item,
+                                        ModelTransformation.Mode.FIXED,
+                                        15,
+                                        15,
+                                        this,
+                                        vertexConsumers,
+                                        0
+                                    )
+                                }
                             }
                         }
                     }
