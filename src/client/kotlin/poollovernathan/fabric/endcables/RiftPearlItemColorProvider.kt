@@ -3,7 +3,6 @@ package poollovernathan.fabric.endcables
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry
 import net.minecraft.block.Block
 import net.minecraft.client.color.item.ItemColorProvider
-import net.minecraft.client.color.item.ItemColors
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 

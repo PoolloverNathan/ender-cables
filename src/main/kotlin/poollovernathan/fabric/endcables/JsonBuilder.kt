@@ -3,11 +3,10 @@ package poollovernathan.fabric.endcables
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import java.util.function.Consumer
 import java.util.function.Supplier
 
 @DslMarker
-private annotation class JsonDslMarker {}
+private annotation class JsonDslMarker
 
 @JsonDslMarker
 class JsonBuilder constructor(): Supplier<JsonElement> {
@@ -24,7 +23,7 @@ class JsonBuilder constructor(): Supplier<JsonElement> {
     fun ary(key: String): JsonArrayBuilder {
         val ary = JsonArrayBuilder()
         element.add(key, ary.element)
-        return ary;
+        return ary
     }
     inline fun ary(key: String, builder: JsonArrayBuilder.() -> Unit) = builder(ary(key))
     fun ary(key: String, vararg elements: JsonElement) = ary(key) {
@@ -55,7 +54,7 @@ class JsonBuilder constructor(): Supplier<JsonElement> {
     fun obj(key: String): JsonBuilder {
         val obj = JsonBuilder()
         element.add(key, obj.element)
-        return obj;
+        return obj
     }
     inline fun obj(key: String, builder: JsonBuilder.() -> Unit) = builder(obj(key))
 
@@ -76,7 +75,7 @@ class JsonArrayBuilder constructor(): Supplier<JsonElement> {
     fun ary(): JsonArrayBuilder {
         val ary = JsonArrayBuilder()
         element.add(ary.element)
-        return ary;
+        return ary
     }
     fun ary(builder: JsonArrayBuilder.() -> Unit) = builder(ary())
     fun ary(vararg elements: JsonElement) = ary {
@@ -107,7 +106,7 @@ class JsonArrayBuilder constructor(): Supplier<JsonElement> {
     fun obj(): JsonBuilder {
         val obj = JsonBuilder()
         element.add(obj.element)
-        return obj;
+        return obj
     }
     fun obj(builder: JsonBuilder.() -> Unit) = builder(obj())
 

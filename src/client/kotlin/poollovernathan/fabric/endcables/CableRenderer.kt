@@ -1,3 +1,5 @@
+@file:Suppress("unused", "unused", "unused", "unused", "unused", "unused", "unused", "unused", "unused")
+
 package poollovernathan.fabric.endcables
 
 import net.minecraft.client.model.ModelPart
@@ -42,22 +44,22 @@ class CableRenderer private constructor(private val ctx: BlockEntityRendererFact
         overlay: Int
     ) {
         entity?.apply {
-            packet?.apply {
-                var color = getColor()
-                color = Color.white()
-                matrices?.push {
-                    vertexConsumers?.render(RenderLayer.getSolid()) {
-                        var progress = when (((world?.time ?: 0) - insertionTime).sign) {
-                            0                     -> tickDelta
-                            1                     -> 1f
-                            -1 /* time-travel? */ -> 0f
-                            else                  -> 0f
+            packets.packets.forEach {
+                it.value.takeIf { it.isPresent }?.get()?.apply {
+                    val color = getColor() //color = Color.white()
+                    matrices?.push {
+                        vertexConsumers?.render(RenderLayer.getSolid()) {
+                            var progress = when (((world?.time ?: 0) - insertionTime.value).sign) {
+                                0                     -> tickDelta
+                                1                     -> 1f
+                                -1 /* time-travel? */ -> 0f
+                                else                  -> 0f
+                            } //progress = ((world!!.time % 4) + tickDelta) / 4 % 1
+                            progress -= 0.5f
+                            if (!forward.value) progress *= -1f
+                            matrices.translate(cachedState[Properties.AXIS].towards(POSITIVE).unitVector * progress)
+                            packetPart.render(matrices, it, 15, 15, color.rF, color.gF, color.bF, color.aF)
                         }
-                        progress = ((world!!.time % 4) + tickDelta) / 4 % 1
-                        progress -= 0.5f
-                        if (!forward) progress *= -1f
-                        matrices.translate(cachedState[Properties.AXIS].towards(POSITIVE).unitVector * progress)
-                        packetPart.render(matrices, it, 15, 15, color.rF, color.gF, color.bF, color.aF)
                     }
                 }
             }

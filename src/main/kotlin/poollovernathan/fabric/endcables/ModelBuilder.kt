@@ -7,11 +7,11 @@ import java.util.function.Supplier
 fun model(id: Identifier, builder: ModelBuilder.() -> Unit): JsonElement = ModelBuilder().also(builder).get()
 
 @DslMarker
-annotation class ModelDslMarker {}
+annotation class ModelDslMarker
 
 @ModelDslMarker
 class ModelBuilder: Supplier<JsonElement> {
-    private val textures = mutableMapOf<String, Identifier>();
+    private val textures = mutableMapOf<String, Identifier>()
     override fun get(): JsonElement = JsonBuilder {
         obj("textures") {
             for ((key, value) in textures) {

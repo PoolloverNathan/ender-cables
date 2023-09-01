@@ -1,3 +1,6 @@
+@file:Suppress("unused", "NOTHING_TO_INLINE", "UNUSED_PARAMETER")
+package poollovernathan.fabric.endcables
+
 inline infix fun Byte.asa(target: Byte.Companion) = this
 inline infix fun Byte.asa(target: UByte.Companion) = this.toUByte()
 inline infix fun Byte.asa(target: Short.Companion) = this.toShort()

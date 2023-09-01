@@ -7,7 +7,7 @@ import net.minecraft.client.render.VertexConsumerProvider
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.util.math.Vec3f
 
-val minecraft
+val minecraft: MinecraftClient
     get() = MinecraftClient.getInstance()
 
 fun MatrixStack.translate(offset: Vec3f) = translate(offset.x.toDouble(), offset.y.toDouble(), offset.z.toDouble())

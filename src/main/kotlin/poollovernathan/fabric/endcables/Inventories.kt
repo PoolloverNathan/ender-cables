@@ -15,18 +15,18 @@ interface ProxyInventory: Inventory, SidedInventory {
 
     override fun isEmpty() = safeInventory.isEmpty()
 
-    override fun getStack(slot: Int) = safeInventory.getStack(slot)
+    override fun getStack(slot: Int): ItemStack = safeInventory.getStack(slot)
 
-    override fun removeStack(slot: Int, amount: Int) = safeInventory.removeStack(slot, amount)
+    override fun removeStack(slot: Int, amount: Int): ItemStack = safeInventory.removeStack(slot, amount)
 
-    override fun removeStack(slot: Int) = safeInventory.removeStack(slot)
+    override fun removeStack(slot: Int): ItemStack = safeInventory.removeStack(slot)
 
     override fun setStack(slot: Int, stack: ItemStack?) = safeInventory.setStack(slot, stack)
 
     override fun markDirty() = safeInventory.markDirty()
 
     override fun canPlayerUse(player: PlayerEntity?) = safeInventory.canPlayerUse(player)
-    override fun getAvailableSlots(side: Direction?) = safeInventory.let {
+    override fun getAvailableSlots(side: Direction?): IntArray = safeInventory.let {
         if (it is SidedInventory) it.getAvailableSlots(side) else (0..<it.size()).toList().toIntArray()
     }
 
@@ -43,11 +43,11 @@ object DummyInventory: Inventory, SidedInventory {
 
     override fun isEmpty() = true
 
-    override fun getStack(slot: Int) = ItemStack.EMPTY
+    override fun getStack(slot: Int): ItemStack = ItemStack.EMPTY
 
-    override fun removeStack(slot: Int, amount: Int) = ItemStack.EMPTY
+    override fun removeStack(slot: Int, amount: Int): ItemStack = ItemStack.EMPTY
 
-    override fun removeStack(slot: Int) = ItemStack.EMPTY
+    override fun removeStack(slot: Int): ItemStack = ItemStack.EMPTY
 
     override fun setStack(slot: Int, stack: ItemStack?) = Unit
 

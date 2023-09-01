@@ -3,7 +3,7 @@ package poollovernathan.fabric.endcables
 import net.fabricmc.api.ClientModInitializer
 
 object ExampleModClient : ClientModInitializer {
-	internal var clientRegisterables = listOf<ClientRegisterable>(
+	internal var clientRegisterables = listOf(
 		CableRenderer,
 		RiftRenderer,
 		RiftPearlItemColorProvider

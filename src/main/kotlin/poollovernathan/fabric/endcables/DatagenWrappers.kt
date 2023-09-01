@@ -11,7 +11,6 @@ import net.minecraft.data.server.recipe.ShapedRecipeJsonBuilder
 import net.minecraft.data.server.recipe.ShapelessRecipeJsonBuilder
 import net.minecraft.item.ItemConvertible
 import net.minecraft.item.ItemStack
-import java.awt.Shape
 import java.util.function.Consumer
 
 inline fun FabricDataGenerator.recipes(crossinline generate: (Consumer<RecipeJsonProvider>) -> Unit) {

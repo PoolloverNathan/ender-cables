@@ -57,8 +57,8 @@ object RiftPearlItem: Item(Settings().group(ItemGroup.REDSTONE).maxCount(1)), Re
     }
 
     fun getTarget(stack: ItemStack?): BlockPos? {
-        if (stack?.item != RiftPearlItem) return null;
-        val nbt = stack.nbt?.getList("Target", NbtInt.INT_TYPE.toInt()).takeIf { (it?.size ?: 0) == 3 } ?: return null;
+        if (stack?.item != RiftPearlItem) return null
+        val nbt = stack.nbt?.getList("Target", NbtInt.INT_TYPE.toInt()).takeIf { (it?.size ?: 0) == 3 } ?: return null
         return BlockPos(nbt.getInt(0), nbt.getInt(1), nbt.getInt(2))
     }
     fun setTarget(stack: ItemStack, target: BlockPos?) {

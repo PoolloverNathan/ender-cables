@@ -4,6 +4,7 @@ import net.minecraft.util.math.MathHelper.clamp
 import org.jetbrains.annotations.Contract
 
 data class Color(val r: Double, val g: Double, val b: Double, val a: Double = 1.0) {
+    @Suppress("unused")
     companion object {
         @Contract("_, _, _, _ -> new", pure = true)
         fun rgb(r: UByte, g: UByte, b: UByte, a: UByte = 0xffu) = Color(r.toDouble() / 255.0, g.toDouble() / 255.0, b.toDouble() / 255.0, a.toDouble() / 255.0)

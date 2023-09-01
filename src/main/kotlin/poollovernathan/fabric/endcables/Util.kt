@@ -1,9 +1,9 @@
 package poollovernathan.fabric.endcables
 
-import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import net.fabricmc.fabric.api.block.v1.FabricBlock
 import net.fabricmc.fabric.api.`object`.builder.v1.block.FabricBlockSettings
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext
 import net.minecraft.block.Block
 import net.minecraft.block.BlockState
 import net.minecraft.block.MapColor
@@ -30,7 +30,7 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 import kotlin.reflect.KProperty
 
-inline infix fun Direction.Axis.towards(ad: Direction.AxisDirection) = Direction.get(ad, this)
+inline infix fun Direction.Axis.towards(ad: Direction.AxisDirection): Direction = Direction.get(ad, this)
 inline infix fun <T> T.into(consumer: Consumer<T>) {
     consumer.accept(this)
 }
@@ -43,7 +43,7 @@ inline operator fun <O, S : State<O, S>?> StateManager.Builder<O, S>.plusAssign(
     add(it)
 }
 
-inline fun netherite(color: MapColor) = FabricBlockSettings.of(Material.METAL, color).sounds(BlockSoundGroup.NETHERITE)
+inline fun netherite(color: MapColor): FabricBlockSettings = FabricBlockSettings.of(Material.METAL, color).sounds(BlockSoundGroup.NETHERITE)
 
 inline infix fun <A, B, C> Pair<A, B>.too(third: C) = Triple(first, second, third)
 data class ModelTransform(
@@ -62,8 +62,10 @@ enum class TransformationType {
 
 inline operator fun Item.times(count: Int) = ItemStack(this, Integer.max(count, this.maxCount))
 class SetOnce<T> private constructor(private var value: T, private val limit: Boolean = false, private val fail: (init: Boolean) -> Nothing) {
-    private object UNINIT;
-    private var wasSet = false;
+    private object UNINIT
+
+    private var wasSet = false
+
     @Suppress("UNCHECKED_CAST")
     companion object {
         fun<T> once(fail: (init: Boolean) -> Nothing) = SetOnce(UNINIT as T, true, fail)
@@ -74,7 +76,7 @@ class SetOnce<T> private constructor(private var value: T, private val limit: Bo
         if (value === UNINIT) {
             fail(false)
         }
-        return value;
+        return value
     }
 
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
@@ -118,3 +120,9 @@ private fun LivingEntity.teleport(destination: Vec3d) {
 }
 
 operator fun Vec3f.times(scale: Float) = Vec3f(x * scale, y * scale, z * scale)
+
+@Suppress("UnstableApiUsage")
+inline operator fun<R> TransactionContext?.invoke(block: (Transaction) -> R) = Transaction.openNested(this).use(block)
+
+@Suppress("UnstableApiUsage")
+inline fun<R> newTransaction(block: (Transaction) -> R) = null(block)

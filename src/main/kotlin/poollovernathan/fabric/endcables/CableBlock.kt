@@ -1,17 +1,13 @@
 package poollovernathan.fabric.endcables
 
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricModelProvider
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider
 import net.fabricmc.fabric.api.`object`.builder.v1.block.entity.FabricBlockEntityTypeBuilder
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction
 import net.minecraft.block.*
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityType
-import net.minecraft.data.client.BlockStateModelGenerator
 import net.minecraft.data.client.BlockStateModelGenerator.createAxisRotatedBlockState
-import net.minecraft.data.client.ItemModelGenerator
 import net.minecraft.data.server.RecipeProvider
-import net.minecraft.data.server.recipe.RecipeJsonProvider
 import net.minecraft.data.server.recipe.ShapedRecipeJsonBuilder
 import net.minecraft.item.*
 import net.minecraft.nbt.NbtCompound
@@ -26,10 +22,11 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
 import net.minecraft.util.registry.Registry
+import net.minecraft.util.shape.VoxelShape
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.BlockView
 import poollovernathan.fabric.endcables.ExampleMod.id
-import java.util.function.Consumer
+import java.util.*
 
 object CableBlock : Block(
     Settings.of(Material.METAL, MapColor.DARK_GREEN).requiresTool().strength(10.0f, 120.0f)
@@ -39,7 +36,8 @@ object CableBlock : Block(
         defaultState = defaultState.with(Properties.AXIS, Direction.Axis.Y)
     }
 
-    override fun getOutlineShape(state: BlockState?, world: BlockView?, pos: BlockPos?, context: ShapeContext?) =
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun getOutlineShape(state: BlockState?, world: BlockView?, pos: BlockPos?, context: ShapeContext?): VoxelShape =
         ((0.25 to 0.75) to (0.0 to 1.0)).run {
             when (state?.get(Properties.AXIS)) {
                 Direction.Axis.X -> second to first too first
@@ -165,6 +163,9 @@ object CableBlock : Block(
                 .input('g', Items.GOLD_INGOT).input('e', Items.ENDER_PEARL).pattern("geg").pattern("   ")
                 .pattern("geg").offerTo(it)
         }
+        generator.language {
+            add(CableBlock, "Ender Cable")
+        }
     }
 
     override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity? {
@@ -178,9 +179,9 @@ private val BlockState.dir1
     get() = this[Properties.AXIS] towards Direction.AxisDirection.POSITIVE
 
 class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, state), CableTransferPacket.Handler {
-    var packet: CableTransferPacket? = null; private set
-    var forward = true; private set
-    var insertionTime = 0L; private set
+    var packets = PacketsContainer(1u)
+    var forward = TransactionalStorage(true)
+    var insertionTime = TransactionalStorage(0L)
     companion object : Registerable, HasID by CableBlock {
         val type: BlockEntityType<CableEntity> = FabricBlockEntityTypeBuilder.create(::CableEntity, CableBlock).build()
         override fun register() {
@@ -188,23 +189,20 @@ class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, s
         }
     }
 
-    override fun readNbt(nbt: NbtCompound?) {
+    override fun readNbt(nbt: NbtCompound) {
         super.readNbt(nbt)
-        packet = ItemPacket() // nbt?.getCompound("Packet")?.let { CableTransferPacket.fromNbt(it) }
-        forward = nbt?.getBoolean("Negative")?.not() ?: true
-        insertionTime = nbt?.getLong("InsertionTime")?.takeIf { it != 0L } ?: world?.time ?: 0L
+        newTransaction { t ->
+            packets.readNbt(nbt, "Packets", t)
+            forward[t] = nbt?.getBoolean("Negative")?.not() ?: true
+            insertionTime[t] = nbt?.getLong("InsertionTime")?.takeIf { it != 0L } ?: world?.time ?: 0L
+            @Suppress("UnstableApiUsage") t.commit()
+        }
     }
 
-    override fun writeNbt(nbt: NbtCompound?) {
-        if (packet == null) {
-            nbt?.remove("Packet")
-        } else {
-            val c = NbtCompound()
-            packet!!.toNbt(c)
-            nbt?.put("Packet", c)
-            nbt?.putBoolean("Negative", !forward)
-            nbt?.putLong("InsertionTime", insertionTime)
-        }
+    override fun writeNbt(nbt: NbtCompound) {
+        packets.writeNbt(nbt, "Packets")
+        nbt?.putBoolean("Negative", !forward.value)
+        nbt?.putLong("InsertionTime", insertionTime.value)
         super.writeNbt(nbt)
     }
 
@@ -214,14 +212,19 @@ class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, s
 
 
 
-    override fun recievePacket(packet: CableTransferPacket, direction: Direction) = runCatching {
-        if (this.packet != null) throw IllegalStateException("Cable is already holding a packet")
-        forward = when (direction) {
-            cachedState.dir0 -> true
-            cachedState.dir1 -> false
-            else -> throw IllegalArgumentException("Cannot accept a packet from this direction")
+    override fun receivePacket(packet: CableTransferPacket, direction: Direction, @Suppress("UnstableApiUsage") transaction: Transaction) = run {
+        transaction {
+            val packetStorage = this.packets.packets[0]
+            if (packetStorage.value.isPresent) return@transaction false
+            forward[it] = when (direction) {
+                cachedState.dir0 -> true
+                cachedState.dir1 -> false
+                else             -> return@transaction false
+            }
+            insertionTime[it] = world?.time ?: 0L
+            packetStorage[it] = Optional.of(packet)
+            it.commit()
+            true
         }
-        insertionTime = world?.time ?: 0L
-        this.packet = packet
     }
 }

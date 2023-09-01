@@ -1,7 +1,5 @@
 package poollovernathan.fabric.endcables
 
-import asa
-import asan
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator
 import net.fabricmc.fabric.mixin.`object`.builder.AbstractBlockAccessor
 import net.fabricmc.fabric.mixin.`object`.builder.AbstractBlockSettingsAccessor
@@ -33,6 +31,7 @@ import net.minecraft.util.registry.Registry
 import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
 
+@Suppress("UnstableApiUsage")
 object RiftBlock: Block(netherite(MapColor.DARK_AQUA).nonOpaque().luminance(Blocks.NETHER_PORTAL.settings.luminance)), HasID, Registerable, BlockEntityProvider, BlockEntityTicker<RiftBlockEntity> {
     override val id = id("rift")
 
@@ -81,7 +80,6 @@ object RiftBlock: Block(netherite(MapColor.DARK_AQUA).nonOpaque().luminance(Bloc
         hand: Hand,
         hit: BlockHitResult
     ): ActionResult {
-        player ?: return ActionResult.PASS
         //if (world?.isClient == true) return ActionResult.PASS
         val entity = world.getBlockEntity(pos) as? RiftBlockEntity ?: return ActionResult.PASS
         val handItem = player.getStackInHand(hand) ?: ItemStack.EMPTY
@@ -92,7 +90,7 @@ object RiftBlock: Block(netherite(MapColor.DARK_AQUA).nonOpaque().luminance(Bloc
             }
         }
         world.playSound(null, pos, if (entity.pearl?.isEmpty == false) SoundEvents.BLOCK_END_PORTAL_FRAME_FILL else SoundEvents.ENTITY_ITEM_FRAME_REMOVE_ITEM, SoundCategory.PLAYERS, 1f, 1f)
-        return ActionResult.SUCCESS;
+        return ActionResult.SUCCESS
     }
 
     override fun <T: BlockEntity> getTicker(
@@ -103,7 +101,7 @@ object RiftBlock: Block(netherite(MapColor.DARK_AQUA).nonOpaque().luminance(Bloc
 
     override fun tick(world: World?, pos: BlockPos?, state: BlockState?, blockEntity: RiftBlockEntity?) {
         if ((blockEntity?.cooldown ?: 0u) > 0u) {
-            blockEntity!!.cooldown--; // 0u > 0u cannot be true
+            blockEntity!!.cooldown-- // 0u > 0u cannot be true
             blockEntity.markDirty()
         }
     }
@@ -132,10 +130,10 @@ private val HasID.blockModel: Identifier
     get() = Identifier(id.namespace, "block/${id.path}")
 inline val <T> T.nonnull; get() = elvis { throw AssertionError("Non-null assertion failed") }
 infix fun ItemStack.equal(other: ItemStack) = ItemStack.areEqual(this, other)
-inline val Item.Settings.common; get() = rarity(Rarity.COMMON)
-inline val Item.Settings.uncommon; get() = rarity(Rarity.UNCOMMON)
-inline val Item.Settings.rare; get() = rarity(Rarity.RARE)
-inline val Item.Settings.epic; get() = rarity(Rarity.EPIC)
+inline val Item.Settings.common: Item.Settings; get() = rarity(Rarity.COMMON)
+inline val Item.Settings.uncommon: Item.Settings; get() = rarity(Rarity.UNCOMMON)
+inline val Item.Settings.rare: Item.Settings; get() = rarity(Rarity.RARE)
+inline val Item.Settings.epic: Item.Settings; get() = rarity(Rarity.EPIC)
 
 
 class RiftBlockEntity(pos: BlockPos, state: BlockState): ClientSyncedBlockEntity(type, pos, state), ProxyInventory {
