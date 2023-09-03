@@ -18,6 +18,7 @@ import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket
 import net.minecraft.sound.BlockSoundGroup
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.Properties
+import net.minecraft.state.property.Properties.*
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
@@ -30,35 +31,36 @@ import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
 import java.util.*
 
-object CableBlock : Block(
+object CableBlock: Block(
     Settings.of(Material.METAL, MapColor.DARK_GREEN).requiresTool().strength(10.0f, 120.0f)
         .sounds(BlockSoundGroup.NETHERITE).nonOpaque()
 ), Registerable, HasID, BlockEntityProvider {
     init {
-        defaultState = defaultState.with(Properties.AXIS, Direction.Axis.Y)
+        defaultState = defaultState.with(AXIS, Direction.Axis.Y)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
-    override fun getOutlineShape(state: BlockState?, world: BlockView?, pos: BlockPos?, context: ShapeContext?): VoxelShape =
-        ((0.25 to 0.75) to (0.0 to 1.0)).run {
-            when (state?.get(Properties.AXIS)) {
-                Direction.Axis.X -> second to first too first
-                Direction.Axis.Y, null -> first to second too first
-                Direction.Axis.Z -> first to first too second
-            }
-        }.run {
-            VoxelShapes.cuboid(first.first, second.first, third.first, first.second, second.second, third.second)
+    override fun getOutlineShape(
+        state: BlockState?, world: BlockView?, pos: BlockPos?, context: ShapeContext?
+    ): VoxelShape = ((0.25 to 0.75) to (0.0 to 1.0)).run {
+        when (state?.get(AXIS)) {
+            Direction.Axis.X       -> second to first too first
+            Direction.Axis.Y, null -> first to second too first
+            Direction.Axis.Z       -> first to first too second
         }
+    }.run {
+        VoxelShapes.cuboid(first.first, second.first, third.first, first.second, second.second, third.second)
+    }
 
     override fun getPlacementState(ctx: ItemPlacementContext?) =
-        super.getPlacementState(ctx)?.with(Properties.AXIS, ctx?.side?.axis)
+        super.getPlacementState(ctx)?.with(AXIS, ctx?.side?.axis)
 
     val item by lazy { BlockItem(this, Item.Settings().group(ItemGroup.REDSTONE)) }
     override val id = id("cable")
 
     override fun appendProperties(builder: StateManager.Builder<Block, BlockState>) {
         super.appendProperties(builder)
-        builder += Properties.AXIS
+        builder += AXIS
     }
 
     override fun register() {
@@ -124,23 +126,23 @@ object CableBlock : Block(
                                     scale = Vec3d(0.375, 0.375, 0.375)
                                 )
 
-                                TransformationType.FIRSTPERSON_LEFT -> ModelTransform(
+                                TransformationType.FIRSTPERSON_LEFT                                       -> ModelTransform(
                                     rotation = Vec3d(0.0, 45.0, 0.0), scale = Vec3d(0.4, 0.4, 0.4)
                                 )
 
-                                TransformationType.FIRSTPERSON_RIGHT -> ModelTransform(
+                                TransformationType.FIRSTPERSON_RIGHT                                      -> ModelTransform(
                                     rotation = Vec3d(0.0, 225.0, 0.0), scale = Vec3d(0.4, 0.4, 0.4)
                                 )
 
-                                TransformationType.GROUND -> ModelTransform(
+                                TransformationType.GROUND                                                 -> ModelTransform(
                                     translation = Vec3d(0.0, 3.0, 0.0), scale = Vec3d(0.25, 0.25, 0.25)
                                 )
 
-                                TransformationType.GUI -> ModelTransform(
+                                TransformationType.GUI                                                    -> ModelTransform(
                                     rotation = Vec3d(30.0, 225.0, 90.0), scale = Vec3d(0.625, 0.625, 0.625)
                                 )
 
-                                TransformationType.FIXED -> ModelTransform(
+                                TransformationType.FIXED                                                  -> ModelTransform(
                                     scale = Vec3d(0.5, 0.5, 0.5)
                                 )
                             }
@@ -162,8 +164,8 @@ object CableBlock : Block(
         generator.recipes {
             ShapedRecipeJsonBuilder.create(CableBlock, 24)
                 .criterion("ender_pearl", RecipeProvider.conditionsFromItem(Items.ENDER_PEARL))
-                .input('g', Items.GOLD_INGOT).input('e', Items.ENDER_PEARL).pattern("geg").pattern("   ")
-                .pattern("geg").offerTo(it)
+                .input('g', Items.GOLD_INGOT).input('e', Items.ENDER_PEARL).pattern("geg").pattern("   ").pattern("geg")
+                .offerTo(it)
         }
         generator.language {
             add(CableBlock, "Ender Cable")
@@ -175,17 +177,15 @@ object CableBlock : Block(
     }
 
     override fun <T: BlockEntity> getTicker(
-        world: World,
-        state: BlockState,
-        type: BlockEntityType<T>
+        world: World, state: BlockState, type: BlockEntityType<T>
     ): BlockEntityTicker<T>? = if (type !== CableEntity.type) null else object: BlockEntityTicker<CableEntity> {
         override fun tick(world: World, pos: BlockPos, state: BlockState, blockEntity: CableEntity) {
             blockEntity.apply {
-                if (insertionTime.value <= world.time) return
+                if (insertionTime.value >= world.time) return
                 val slot = packets.packets.find { it.value.isPresent } ?: return
                 newTransaction { t ->
                     val packet = slot.value.get() // found a present value earlier
-                    if (packet.send(getOutput(), t)) {
+                    if (packet.send(outputDir, t)) {
                         slot[t] = Optional.empty()
                         t.commit()
                     }
@@ -195,16 +195,17 @@ object CableBlock : Block(
     }.coerce()
 }
 
-private val BlockState.dir0
-    get() = this[Properties.AXIS] towards Direction.AxisDirection.NEGATIVE
-private val BlockState.dir1
-    get() = this[Properties.AXIS] towards Direction.AxisDirection.POSITIVE
+private val BlockState.dirNeg
+    get() = this[AXIS] towards Direction.AxisDirection.NEGATIVE
+private val BlockState.dirPos
+    get() = this[AXIS] towards Direction.AxisDirection.POSITIVE
 
-class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, state), CableTransferPacket.Handler {
+class CableEntity(pos: BlockPos?, state: BlockState?): BlockEntity(type, pos, state), CableTransferPacket.Handler {
     var packets = PacketsContainer(1u)
     var forward = TransactionalStorage(true)
     var insertionTime = TransactionalStorage(0L)
-    companion object : Registerable, HasID by CableBlock {
+
+    companion object: Registerable, HasID by CableBlock {
         val type: BlockEntityType<CableEntity> = FabricBlockEntityTypeBuilder.create(::CableEntity, CableBlock).build()
         override fun register() {
             Registry.register(Registry.BLOCK_ENTITY_TYPE, id, type)
@@ -232,25 +233,33 @@ class CableEntity(pos: BlockPos?, state: BlockState?) : BlockEntity(type, pos, s
 
     override fun toInitialChunkDataNbt(): NbtCompound? = createNbt()
 
-    fun getOutput(): Direction = if (forward.value) {
-        cachedState.dir1
-    } else {
-        cachedState.dir0
-    }
+    val outputDir
+        get() = if (forward.value) {
+            cachedState.dirPos
+        } else {
+            cachedState.dirNeg
+        }
 
-    override fun receivePacket(packet: CableTransferPacket, direction: Direction, @Suppress("UnstableApiUsage") transaction: Transaction) = run {
+    override fun canReceivePacket(packet: CableTransferPacket, direction: Direction, transaction: Transaction) =
+        this.packets.packets[0].value.isEmpty && (direction.axis == cachedState[AXIS])
+
+    override fun receivePacket(
+        packet: CableTransferPacket, direction: Direction, transaction: Transaction
+    ) {
         transaction {
             val packetStorage = this.packets.packets[0]
-            if (packetStorage.value.isPresent) return@transaction false
+            if (packetStorage.value.isPresent) throw IllegalStateException("Cable already has a packet")
             forward[it] = when (direction) {
-                cachedState.dir0 -> true
-                cachedState.dir1 -> false
-                else             -> return@transaction false
+                cachedState.dirPos -> false
+                cachedState.dirNeg -> true
+                else               -> throw IllegalArgumentException("Packet is arriving from incorrect direction")
             }
             insertionTime[it] = world?.time ?: 0L
             packetStorage[it] = Optional.of(packet)
             it.commit()
-            true
         }
     }
+
+    val BlockState.dir
+        get() = this[AXIS] towards (if (forward.value) Direction.AxisDirection.POSITIVE else Direction.AxisDirection.NEGATIVE)
 }

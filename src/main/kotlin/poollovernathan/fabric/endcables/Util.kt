@@ -2,15 +2,16 @@ package poollovernathan.fabric.endcables
 
 import com.google.gson.JsonObject
 import net.fabricmc.fabric.api.`object`.builder.v1.block.FabricBlockSettings
+import net.fabricmc.fabric.api.transfer.v1.item.InventoryStorage
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext
-import net.minecraft.block.Block
-import net.minecraft.block.BlockState
-import net.minecraft.block.MapColor
-import net.minecraft.block.Material
+import net.minecraft.block.*
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.entity.LivingEntity
+import net.minecraft.inventory.Inventory
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NbtCompound
@@ -25,6 +26,7 @@ import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
 import net.minecraft.util.math.Vec3f
 import net.minecraft.util.registry.Registry
+import net.minecraft.world.WorldAccess
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 import java.util.function.Supplier
@@ -134,3 +136,13 @@ inline fun<R> stackOverflowFallback(value: R, block: () -> R) = try {
 }
 
 inline fun<R> stackOverflowFallback(block: () -> R) = stackOverflowFallback(Unit, block)
+fun WorldAccess.getStorage(pos: BlockPos, side: Direction): Storage<ItemVariant>? {
+    val blockState = getBlockState(pos)
+    val block = blockState.block
+    val inv = if (block is InventoryProvider) {
+        block.getInventory(blockState, this, pos)
+    } else {
+        getBlockEntity(pos) as? Inventory
+    } ?: return null
+    return InventoryStorage.of(inv, side)
+}

@@ -14,7 +14,11 @@ object ExampleMod : ModInitializer {
 		CableEntity,
 		ItemPacket,
 		RiftBlock,
-		RiftPearlItem
+		RiftPearlItem,
+		InserterBlock,
+		InserterBlockEntity,
+		ConsumerBlock,
+		ConsumerBlockEntity,
 	)
 
 	override fun onInitialize() {

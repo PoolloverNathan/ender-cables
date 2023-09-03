@@ -15,6 +15,7 @@ import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
 import net.minecraft.util.registry.Registry
 import net.minecraft.world.World
+import org.jetbrains.annotations.Contract
 import poollovernathan.fabric.endcables.ExampleMod.id
 import kotlin.jvm.optionals.getOrElse
 
@@ -34,7 +35,7 @@ abstract class CableTransferPacket(val type: CableTransferPacketType<*>) {
          */
         fun fromNbt(nbt: NbtCompound): CableTransferPacket? = nbt.getString("Type")
             .runCatching { Identifier(this) }
-            .map { registry.get(it) }
+            .mapCatching { registry.get(it) }
             .map { it?.createPacket() }
             .onSuccess { it?.readNbt(nbt) }
             .getOrNull()
@@ -63,9 +64,9 @@ abstract class CableTransferPacket(val type: CableTransferPacketType<*>) {
     open fun getColor() = Color.white()
 
     /**
-     * A method that is invoked when the packet dies. Packets die if they are inserted into air. Dying packets should drop their contents, if possible.
+     * Called when the packet dies. When this is called, it should drop any contained resources it can.
      */
-    open fun onDie(world: World, pos: Vec3d, dir: Direction, @Suppress("UnstableApiUsage") transaction: Transaction) = Unit
+    open fun die(world: World, pos: Vec3d, dir: Direction, @Suppress("UnstableApiUsage") transaction: Transaction) = Unit
 
 
     interface CableTransferPacketType<T: CableTransferPacket> {
@@ -75,28 +76,58 @@ abstract class CableTransferPacket(val type: CableTransferPacketType<*>) {
         fun createPacket(): T
     }
 
-    interface Handler {
+    interface Receiver {
+        /**
+         * Validates a receiver's ability to receive a packet. This method MUST be pure.
+         * @param packet The packet that the [Sender] is trying to send.
+         * @param direction The direction of the [Sender] trying to send the packet.
+         * @param transaction A transaction that is doubly-nested and therefore can only be used for validation purposes.
+         * @return Whether the receiver can accept the packet. If true, at least one immediate [receivePacket] MUST be successful and MUST NOT throw. If false, [receivePacket] SHOULD throw.
+         */
+        @Contract(pure = true)
+        fun canReceivePacket(packet: CableTransferPacket, direction: Direction, transaction: Transaction): Boolean
+        /**
+         * Receives a packet from another Handler. At this point, it is too late to cancel receiving.
+         * @param packet The packet that was received.
+         * @param direction The direction the packet is coming from.
+         */
+        @Contract(mutates = "this")
+        fun receivePacket(packet: CableTransferPacket, direction: Direction, @Suppress("UnstableApiUsage") transaction: Transaction)
+    }
+
+    interface Sender {
         fun getWorld(): World?
         fun getPos(): BlockPos
         /**
-         * Receives a packet from another Handler.
-         * @param packet The packet that was received.
-         * @param direction The direction the packet is coming from.
-         * @return A [Boolean] that is true if the packet was accepted. If it is true, the receiver should store the packet for later sending or immediately consume it.
-         */
-        fun receivePacket(packet: CableTransferPacket, direction: Direction, @Suppress("UnstableApiUsage") transaction: Transaction): Boolean
-
-        /**
-         * A convenience function to send a packet to another Handler.
+         * A convenience function to send a packet to an adjacent [Receiver]. Locates the [Receiver], then calls [Receiver.canReceivePacket] (returning false if it returns false) and [Receiver.receivePacket].
          * @param packet The packet to send.
          * @param direction The direction to send the packet in.
-         * @return A [Boolean] that is true if the packet was accepted. If it is true, the sender should forget about the packet.
+         * @return A [Boolean] that is true if the packet could be sent. If it is true, the sender should forget about the packet.
          */
         fun sendPacket(packet: CableTransferPacket, direction: Direction, @Suppress("UnstableApiUsage") transaction: Transaction): Boolean {
             val targetPos = getPos().offset(direction)
             val target = getWorld()?.getBlockEntity(targetPos) ?: return false
-            if (target !is Handler) return false
-            return target.receivePacket(packet, direction.opposite, transaction)
+            if (target !is Receiver) return false
+            transaction.openNested().use { it.openNested().use { target.canReceivePacket(packet, direction.opposite, it ) }}.also { if (!it) return it }
+            try {
+                target.receivePacket(packet, direction.opposite, transaction)
+            } catch (e: Throwable) {
+                throw RuntimeException("Bad receivePacket implementation", e)
+            }
+            return true
+        }
+
+        /**
+         * A convenience function to send a packet to an adjacent [Receiver]. Locates the [Receiver] and calls [Receiver.canReceivePacket]
+         * @param packet The packet to send.
+         * @param direction The direction to send the packet in.
+         * @return A [Boolean] that is true if the packet could be sent. If it is true, the sender should forget about the packet.
+         */
+        fun canSendPacket(packet: CableTransferPacket, direction: Direction, @Suppress("UnstableApiUsage") transaction: Transaction): Boolean {
+            val targetPos = getPos().offset(direction)
+            val target = getWorld()?.getBlockEntity(targetPos) ?: return false
+            if (target !is Receiver) return false
+            return transaction.openNested().use { it.openNested().use { target.canReceivePacket(packet, direction, it ) }}
         }
         /**
          * An alias for [sendPacket].
@@ -104,9 +135,11 @@ abstract class CableTransferPacket(val type: CableTransferPacketType<*>) {
         @Suppress("unused")
         fun CableTransferPacket.send(direction: Direction, @Suppress("UnstableApiUsage") transaction: Transaction) = sendPacket(this, direction, transaction)
     }
+
+    interface Handler: Sender, Receiver
 }
 
-class ItemPacket: CableTransferPacket(ItemPacket) {
+class ItemPacket(var item: ItemStack = ItemStack.EMPTY): CableTransferPacket(ItemPacket) {
     companion object: CableTransferPacketType<ItemPacket>, HasID, Registerable {
         override fun createPacket() = ItemPacket()
         override val id = id("item")
@@ -115,7 +148,6 @@ class ItemPacket: CableTransferPacket(ItemPacket) {
             Registry.register(registry, id, this)
         }
     }
-    var item: ItemStack = ItemStack.EMPTY
     override fun readNbt(nbt: NbtCompound) {
         item = (nbt.get("Item") as? NbtCompound)?.let { ItemStack.fromNbt(it) } ?: ItemStack.EMPTY
     }
@@ -129,7 +161,7 @@ class ItemPacket: CableTransferPacket(ItemPacket) {
 
     override fun getColor() = Color.rgb(52u, 161u, 235u)
 
-    override fun onDie(world: World, pos: Vec3d, dir: Direction, @Suppress("UnstableApiUsage") transaction: Transaction) {
+    override fun die(world: World, pos: Vec3d, dir: Direction, @Suppress("UnstableApiUsage") transaction: Transaction) {
         val ejectVelocity = getEjectVelocity(dir)
         val entity = ItemEntity(world, pos.x, pos.y, pos.z, item, ejectVelocity.x, ejectVelocity.y, ejectVelocity.z)
         world.spawnEntity(entity)
@@ -141,3 +173,4 @@ abstract class ClientSyncedBlockEntity(type: BlockEntityType<*>, pos: BlockPos, 
     override fun toUpdatePacket(): BlockEntityUpdateS2CPacket = BlockEntityUpdateS2CPacket.create(this)
     override fun toInitialChunkDataNbt(): NbtCompound = createNbt()
 }
+
