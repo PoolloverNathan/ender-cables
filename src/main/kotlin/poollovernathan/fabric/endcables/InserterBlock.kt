@@ -28,7 +28,7 @@ import java.util.*
 private val BlockState.inputFace; get() = this[FACING]
 private val BlockState.outputFace; get() = inputFace.opposite
 
-object InserterBlock: Block(netherite(MapColor.ORANGE)), HasID, Registerable, BlockEntityProvider {
+object InserterBlock: Block(netherite(MapColor.BLUE).nonOpaque()), HasID, Registerable, BlockEntityProvider {
     override val id = id("inserter")
 
     override fun register() {

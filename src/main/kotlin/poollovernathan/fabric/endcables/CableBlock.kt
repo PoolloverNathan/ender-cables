@@ -32,8 +32,7 @@ import poollovernathan.fabric.endcables.ExampleMod.id
 import java.util.*
 
 object CableBlock: Block(
-    Settings.of(Material.METAL, MapColor.DARK_GREEN).requiresTool().strength(10.0f, 120.0f)
-        .sounds(BlockSoundGroup.NETHERITE).nonOpaque()
+    netherite(MapColor.DEEPSLATE_GRAY).strength(10.0f, 120.0f).nonOpaque()
 ), Registerable, HasID, BlockEntityProvider {
     init {
         defaultState = defaultState.with(AXIS, Direction.Axis.Y)

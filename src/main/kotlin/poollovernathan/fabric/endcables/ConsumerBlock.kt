@@ -5,10 +5,7 @@ import net.fabricmc.fabric.api.item.v1.FabricItemSettings
 import net.fabricmc.fabric.api.`object`.builder.v1.block.entity.FabricBlockEntityTypeBuilder
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction
-import net.minecraft.block.Block
-import net.minecraft.block.BlockEntityProvider
-import net.minecraft.block.BlockState
-import net.minecraft.block.MapColor
+import net.minecraft.block.*
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityTicker
 import net.minecraft.block.entity.BlockEntityType
@@ -26,7 +23,7 @@ import net.minecraft.util.registry.Registry
 import net.minecraft.world.World
 import poollovernathan.fabric.endcables.ExampleMod.id
 
-object ConsumerBlock: Block(netherite(MapColor.ORANGE)), HasID, Registerable, BlockEntityProvider {
+object ConsumerBlock: Block(netherite(MapColor.ORANGE).nonOpaque()), HasID, Registerable, BlockEntityProvider {
     override val id = id("consumer")
 
     override fun register() {
@@ -73,10 +70,10 @@ fun BlockStateModelGenerator.registerSouthDefaultFacing(block: Block) {
 }
 
 fun createSouthDefaultRotationStates() = BlockStateVariantMap.create(Properties.FACING).register(
-    Direction.SOUTH, BlockStateVariant.create()
-).register(Direction.WEST, BlockStateVariant.create().put(VariantSettings.Y, Rotation.R90)).register(
-    Direction.NORTH, BlockStateVariant.create().put(VariantSettings.Y, Rotation.R180)
-).register(Direction.EAST, BlockStateVariant.create().put(VariantSettings.Y, Rotation.R270)).register(Direction.DOWN, BlockStateVariant.create().put(VariantSettings.X, Rotation.R90)).register(Direction.UP, BlockStateVariant.create().put(VariantSettings.X, Rotation.R270))
+    Direction.NORTH, BlockStateVariant.create()
+).register(Direction.EAST, BlockStateVariant.create().put(VariantSettings.Y, Rotation.R90)).register(
+    Direction.SOUTH, BlockStateVariant.create().put(VariantSettings.Y, Rotation.R180)
+).register(Direction.WEST, BlockStateVariant.create().put(VariantSettings.Y, Rotation.R270)).register(Direction.DOWN, BlockStateVariant.create().put(VariantSettings.X, Rotation.R90)).register(Direction.UP, BlockStateVariant.create().put(VariantSettings.X, Rotation.R270))
 
 class ConsumerBlockEntity(pos: BlockPos, state: BlockState): BlockEntity(type, pos, state), CableTransferPacket.Handler {
     val cooldown = Cooldown(5u)
